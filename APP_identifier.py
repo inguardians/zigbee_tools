@@ -126,7 +126,6 @@ if __name__ == '__main__':
                 print "        No packets contain Security Layer. Exiting"
                 #sys.exit()
                 continue
-
         if DEBUG: print
 
         # Decrypt Packets
@@ -140,29 +139,9 @@ if __name__ == '__main__':
                     if DEBUG: print "            Profile: %s"%scapy.layers.dot15d4._zcl_profile_identifier[enc_data.getlayer(ZigbeeAppDataPayload).fields['profile']]
                 except:
                     if DEBUG: print "            Profile with unknown value:",hex(enc_data.getlayer(ZigbeeAppDataPayload).fields['profile'])
-                if (enc_data.getlayer(ZigbeeAppDataPayload).fields['profile'] == SE_Smart_Energy_Profile): 
-                    if DEBUG: print "        Packet has SEP Application Layer:",e
-                    if enc_data.haslayer(ZigbeeSecurityHeader):
-                        if DEBUG: 
-                            print "            SE Smart Energy Data (encrypted):", enc_data.getlayer(ZigbeeSecurityHeader).fields['data'].encode('hex')
-                            #print "            enc_data:",enc_data.summary,"\n"
-                        else:
-                            print "SE Smart Energy Data (fc):",hex(enc_data.getlayer(ZigbeeSecurityHeader).fields['fc']),"(encrypted data):", enc_data.getlayer(ZigbeeSecurityHeader).fields['data'].encode('hex')
-                            #print "enc_data:",enc_data.summary,"\n"
-                    else:
-                        if DEBUG: 
-                            print "            SE Smart Energy Data (RAW LAYER PAYLOAD):", enc_data.getlayer(Raw).fields['load'].encode('hex')
-                            #print "            enc_data:",enc_data.summary,"\n"
-                        else:
-                            if SHOW_RAW:
-                                print "SE Smart Energy Data (RAW LAYER PAYLOAD):", enc_data.getlayer(Raw).fields['load'].encode('hex')
-                                print "enc_data:",enc_data.summary,"\n"
-                    if DEBUG: print
-                else:
-                    if DEBUG: print "            Packet has no SEP Application Layer:",e
-                    if DEBUG: print
+                if DEBUG: print
             else:
                 if DEBUG: print "        Packet has no Application Layer:",e
-                if DEBUG: print
+
 
 
