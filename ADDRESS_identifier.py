@@ -1,5 +1,7 @@
 #! /usr/bin/env python
 
+# FIXME: This tools should identify gateways, clients, and their associated PANIDs
+
 ###############################
 # Imports taken from zbscapy
 ###############################
@@ -20,7 +22,7 @@ from killerbee.scapy_extensions import *	# this is explicit because I didn't wan
 
 del hexdump
 from scapy.utils import hexdump				# Force using Scapy's hexdump()
-import os, sys
+import os, sys, struct
 from glob import glob
 ###############################
 
@@ -33,8 +35,6 @@ DEBUG       = False
 SHOW_RAW    = False
 #zb_file     = None
 zb_files    = []
-find_key    = False
-#network_key = "\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf" # Network Key from zbgoodfind
 network_key = None
 cert_key    = None
 SE_Smart_Energy_Profile = 0x0109 # 265
@@ -67,12 +67,27 @@ ZB_Layers_Names = [ \
     "ZigbeeAppCommandPayload" \
 ]
 
+# Addresses
+zb_addrs = { \
+    'src_addr':'00:00:00:00:00:00', \
+    'dest_addr':'00:00:00:00:00:00', \
+    'extended_pan_id':'00:00:00:00:00:00', \
+    'src_addr':0xffff, \
+    'source':'00:00:00:00:00:00', \
+    #'source':0xffff, \
+    'src_panid':0xffff, \
+    'ext_src':'00:00:00:00:00:00', \
+    'dest_panid':0xffff, \
+    'dest_addr':0x0, \
+    'destination':0xffff \
+}
+addr_names = zb_addrs.keys()
+
 def usage():
     print "%s Usage"%sys.argv[0]
     print "    -h: help"
     print "    -f <filename>: capture file with zigbee packets."
     print "    -d <directory name>: directory containing capture files with zigbee packets."
-    print "    -k <network_key>: Network Key in ASCII format. Will be converted for use."
     print "    -D: Turn on debugging."
     sys.exit()
 
@@ -99,7 +114,7 @@ def detect_layer(pkt,layer):
 if __name__ == '__main__':
 
     # Process options
-    ops = ['-f','-d','-k','-D','-h']
+    ops = ['-f','-d','-D','-h']
 
     while len(sys.argv) > 1:
         op = sys.argv.pop(1)
@@ -108,8 +123,6 @@ if __name__ == '__main__':
         if op == '-d':
             dir_name = sys.argv.pop(1)
             zb_files = glob(os.path.abspath(os.path.expanduser(os.path.expandvars(dir_name))) + '/*.pcap')
-        if op == '-k':
-            network_key = sys.argv.pop(1).decode('hex')
         if op == '-D':
             DEBUG = True
         if op == '-h':
@@ -132,27 +145,21 @@ if __name__ == '__main__':
         # Detect Layers
         if DEBUG: print indent + "Detecting ZigBee Layers"
         for e in range(num_pkts):
-            if DEBUG:
-                print indent + "Packet " + str(e),data[e].summary()
-            else:
-                print indent + "Packet " + str(e)
+            if DEBUG: print indent + "Packet " + str(e),data[e].summary()
 
             for l in ZB_Layers:
-                if detect_layer(data[e],l): print indent*2 + ZB_Layers_Names[ZB_Layers.index(l)]
-
-            if detect_encryption(data[e]): 
-                try:
-                    print indent*2 + "%s"%scapy.layers.dot15d4._zcl_profile_identifier[enc_data.getlayer(ZigbeeAppDataPayload).fields['profile']]
-                except:
-                    print indent*2 + "Unknown Encrypted App Layer"
-                if network_key:
-                    enc_data = kbdecrypt(data[e],network_key)
-                    for a in ZB_Layers:
-                        if detect_layer(enc_data,a): print indent*3 + ZB_Layers_Names[ZB_Layers.index(a)]
-                        # TODO: Might have additional encryption
-                        #if detect_encryption(enc_data): print indent*3 + "Additional Encryption Detected."
-                else:
-                    print indent*3 + "Has Encrypted Data, no network key provided."
+                if detect_layer(data[e],l): 
+                    print indent*2 + ZB_Layers_Names[ZB_Layers.index(l)]
+                    fields = data[e].getlayer(l).fields
+                    if DEBUG: print indent*3 + "Fields:",fields
+                    for a in addr_names:
+                        if fields.has_key(a) and fields[a]: 
+                            val = fields[a]
+                            # If this is an extended address then we have to split
+                            if val > 0xffff:
+                                print indent*3 + a + ":",':'.join(x.encode('hex') for x in struct.pack('>Q',val))
+                            else:
+                                print indent*3 + a + ":",hex(val)
 
         print ""
 

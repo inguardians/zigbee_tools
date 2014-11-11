@@ -20,7 +20,7 @@ from killerbee.scapy_extensions import *	# this is explicit because I didn't wan
 
 del hexdump
 from scapy.utils import hexdump				# Force using Scapy's hexdump()
-import os, sys
+import os, sys, struct
 from glob import glob
 ###############################
 
@@ -31,11 +31,9 @@ from glob import glob
 indent      = "    "
 DEBUG       = False
 SHOW_RAW    = False
-#zb_file     = None
-zb_files    = []
+zb_file     = None
+zb_output   = None
 find_key    = False
-#network_key = "\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf" # Network Key from zbgoodfind
-network_key = None
 cert_key    = None
 SE_Smart_Energy_Profile = 0x0109 # 265
 
@@ -67,13 +65,28 @@ ZB_Layers_Names = [ \
     "ZigbeeAppCommandPayload" \
 ]
 
+# Addresses
+zb_addrs = { \
+    'src_addr':'00:00:00:00:00:00', \
+    'dest_addr':'00:00:00:00:00:00', \
+    'extended_pan_id':'00:00:00:00:00:00', \
+    'src_addr':0xffff, \
+    'source':'00:00:00:00:00:00', \
+    #'source':0xffff, \
+    'src_panid':0xffff, \
+    'ext_src':'00:00:00:00:00:00', \
+    'dest_panid':0xffff, \
+    'dest_addr':0x0, \
+    'destination':0xffff \
+}
+addr_names = zb_addrs.keys()
+
 def usage():
     print "%s Usage"%sys.argv[0]
     print "    -h: help"
     print "    -f <filename>: capture file with zigbee packets."
-    print "    -d <directory name>: directory containing capture files with zigbee packets."
-    print "    -k <network_key>: Network Key in ASCII format. Will be converted for use."
-    print "    -D: Turn on debugging."
+    print "    -o <filename>: file to write new zigbee packets."
+    print "    -D: Turn on debugging. This supresses writing to a file."
     sys.exit()
 
 def detect_encryption(pkt):
@@ -99,17 +112,15 @@ def detect_layer(pkt,layer):
 if __name__ == '__main__':
 
     # Process options
-    ops = ['-f','-d','-k','-D','-h']
+    ops = ['-f','-o','-D','-h']
 
     while len(sys.argv) > 1:
         op = sys.argv.pop(1)
         if op == '-f':
-            zb_files = [sys.argv.pop(1)]
-        if op == '-d':
-            dir_name = sys.argv.pop(1)
-            zb_files = glob(os.path.abspath(os.path.expanduser(os.path.expandvars(dir_name))) + '/*.pcap')
-        if op == '-k':
-            network_key = sys.argv.pop(1).decode('hex')
+            # Users can only update one pcap file per run
+            zb_file = sys.argv.pop(1)
+        if op == '-o':
+            zb_output = sys.argv.pop(1)
         if op == '-D':
             DEBUG = True
         if op == '-h':
@@ -119,40 +130,54 @@ if __name__ == '__main__':
             usage()
 
     # Test for user input
-    if not zb_files: usage()
-    #if not network_key: usage()
+    if not zb_file: usage()
+    if not zb_output: usage()
+    new_addr = {}
 
-    if DEBUG: print "\nProcessing files:",zb_files,"\n"
-    for zb_file in zb_files:
-        if DEBUG: print "\nProcessing file:",zb_file,"\n"
-        #print "\nProcessing file:",zb_file,"\n"
-        data = kbrdpcap(zb_file)
-        num_pkts = len(data)
+    if DEBUG: print "\nProcessing file:",zb_file,"\n"
+    if DEBUG: print "\nOutput file:",zb_output,"\n"
+    data = kbrdpcap(zb_file)
+    num_pkts = len(data)
 
-        # Detect Layers
-        if DEBUG: print indent + "Detecting ZigBee Layers"
-        for e in range(num_pkts):
-            if DEBUG:
-                print indent + "Packet " + str(e),data[e].summary()
-            else:
-                print indent + "Packet " + str(e)
+    for e in range(num_pkts):
+        print data[e].summary()
 
-            for l in ZB_Layers:
-                if detect_layer(data[e],l): print indent*2 + ZB_Layers_Names[ZB_Layers.index(l)]
+    # Process Pcap File
+    if DEBUG: print indent + "Processing Pcap File"
+    for e in range(num_pkts):
+        if DEBUG: print indent  + str(e),repr(data[e]),"\n"
 
-            if detect_encryption(data[e]): 
-                try:
-                    print indent*2 + "%s"%scapy.layers.dot15d4._zcl_profile_identifier[enc_data.getlayer(ZigbeeAppDataPayload).fields['profile']]
-                except:
-                    print indent*2 + "Unknown Encrypted App Layer"
-                if network_key:
-                    enc_data = kbdecrypt(data[e],network_key)
-                    for a in ZB_Layers:
-                        if detect_layer(enc_data,a): print indent*3 + ZB_Layers_Names[ZB_Layers.index(a)]
-                        # TODO: Might have additional encryption
-                        #if detect_encryption(enc_data): print indent*3 + "Additional Encryption Detected."
-                else:
-                    print indent*3 + "Has Encrypted Data, no network key provided."
+        # Process each layer individually
+        for l in ZB_Layers:
+            if detect_layer(data[e],l): 
+                fields = data[e].getlayer(l).fields
+                # Look for all of the possible address fields
+                for a in addr_names:
+                    if fields.has_key(a) and fields[a]: 
+                        val = fields[a]
+                        # If this is an extended address then we have to split
+                        if val > 0xffff:
+                            if not new_addr.has_key(val): new_addr[val] = randbytes(8)
+                            val = int(new_addr[val].encode('hex'),16)
+                        else:
+                            # Avoid broadcast short addresses
+                            if val < 0xfff0 and not (val == 0):
+                                if not new_addr.has_key(val): new_addr[val] = randbytes(2)
+                                val = int(new_addr[val].encode('hex'),16)
+                        data[e].getlayer(l).fields[a] = val
 
+    # Write results
+    if DEBUG: 
         print ""
+        print "Results not written to output file in debug mode:",zb_output
+        print "New Addresses:",new_addr
+        print ""
+        print "New Packets"
+        for e in range(num_pkts):
+            print indent + "new_" + str(e),repr(data[e]),"\n"
+
+    # Write new file
+    if not DEBUG: 
+        print "Sending output to new pcap file:",zb_output
+        kbwrpcap(zb_output,data)
 
