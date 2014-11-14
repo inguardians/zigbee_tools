@@ -28,6 +28,7 @@ from glob import glob
 # Processing Functions
 ###############################
 # Defaults
+indent      = "    "
 DEBUG       = False
 SHOW_RAW    = False
 #zb_file     = None
@@ -103,66 +104,67 @@ if __name__ == '__main__':
 
         # Pull Network Key from the file and use it
         if find_key:
-            if DEBUG: print "    Finding Network Key from capture file."
+            print indent + "Finding Network Key from capture file."
             net_info    = kbgetnetworkkey(data)
-            if DEBUG: print "        Network Info:",net_info
+            if DEBUG: print indent*2 + "Network Info:",net_info
             # If we found Network Key then save it. Else, roll with the default
             if net_info.has_key('key'): 
                 network_key = ''.join(net_info['key'].split(':')).decode('hex')
-                if DEBUG: "        Network Key Found:",network_key.encode('hex')
+                print indent*2 + "Network Key Found:",network_key.encode('hex')
             else:
-                if DEBUG: "        Network Key Not Found, using default value:",network_key.encode('hex')
+                print indent*2 + "Network Key Not Found, using default value:",network_key.encode('hex')
 
         # Detect Encrypted Packets
         enc_pkts = []
-        if DEBUG: print "    Find encrypted packets using network key:",network_key.encode('hex')
+        if DEBUG: print indent + "Find encrypted packets using network key:",network_key.encode('hex')
         for e in range(num_pkts):
             if detect_encryption(data[e]): 
                 enc_pkts.append(e)
         if DEBUG: 
             if enc_pkts: 
-                print "        Security Layer Found in packet numbers:",enc_pkts
+                print indent*2 + "Security Layer Found in packet numbers:",enc_pkts
             else:
-                print "        No packets contain Security Layer. Exiting"
+                print indent*2 + "No packets contain Security Layer. Exiting"
                 #sys.exit()
                 continue
 
         if DEBUG: print
 
         # Decrypt Packets
-        if DEBUG: print "    Find packets with Application Layer."
+        if DEBUG: print indent + "Find packets with Application Layer."
         for e in enc_pkts:
-            enc_data = kbdecrypt(data[e],network_key)
-            if detect_app_layer(enc_data):
-                if DEBUG: print "        Packet has Application Layer:",e
-                #if DEBUG: print enc_data.summary,'\n'
-                try:
-                    if DEBUG: print "            Profile: %s"%scapy.layers.dot15d4._zcl_profile_identifier[enc_data.getlayer(ZigbeeAppDataPayload).fields['profile']]
-                except:
-                    if DEBUG: print "            Profile with unknown value:",hex(enc_data.getlayer(ZigbeeAppDataPayload).fields['profile'])
-                if (enc_data.getlayer(ZigbeeAppDataPayload).fields['profile'] == SE_Smart_Energy_Profile): 
-                    if DEBUG: print "        Packet has SEP Application Layer:",e
-                    if enc_data.haslayer(ZigbeeSecurityHeader):
-                        if DEBUG: 
-                            print "            SE Smart Energy Data (encrypted):", enc_data.getlayer(ZigbeeSecurityHeader).fields['data'].encode('hex')
-                            #print "            enc_data:",enc_data.summary,"\n"
+            try:
+                enc_data = kbdecrypt(data[e],network_key)
+                if detect_app_layer(enc_data):
+                    if DEBUG: print indent*2 + "Packet has Application Layer:",e
+                    #if DEBUG: print enc_data.summary,'\n'
+                    try:
+                        if DEBUG: print indent*3 + "Profile: %s"%scapy.layers.dot15d4._zcl_profile_identifier[enc_data.getlayer(ZigbeeAppDataPayload).fields['profile']]
+                    except:
+                        if DEBUG: print indent*3 + "Profile with unknown value:",hex(enc_data.getlayer(ZigbeeAppDataPayload).fields['profile'])
+                    if (enc_data.getlayer(ZigbeeAppDataPayload).fields['profile'] == SE_Smart_Energy_Profile): 
+                        if DEBUG: print indent*3 + "Packet has SEP Application Layer:"
+                        if enc_data.haslayer(ZigbeeSecurityHeader):
+                            if DEBUG: 
+                                print indent*3 + "SE Smart Energy Data (encrypted):", enc_data.getlayer(ZigbeeSecurityHeader).fields['data'].encode('hex')
+                            else:
+                                print "SE Smart Energy Data (fc):",hex(enc_data.getlayer(ZigbeeSecurityHeader).fields['fc']),"(encrypted data):", enc_data.getlayer(ZigbeeSecurityHeader).fields['data'].encode('hex')
                         else:
-                            print "SE Smart Energy Data (fc):",hex(enc_data.getlayer(ZigbeeSecurityHeader).fields['fc']),"(encrypted data):", enc_data.getlayer(ZigbeeSecurityHeader).fields['data'].encode('hex')
-                            #print "enc_data:",enc_data.summary,"\n"
+                            if DEBUG: 
+                                print indent*3 + "SE Smart Energy Data (RAW LAYER PAYLOAD):", enc_data.getlayer(Raw).fields['load'].encode('hex')
+                            else:
+                                if SHOW_RAW:
+                                    print "SE Smart Energy Data (RAW LAYER PAYLOAD):", enc_data.getlayer(Raw).fields['load'].encode('hex')
+                                    print "enc_data:",enc_data.summary,"\n"
+                        if DEBUG: print
                     else:
-                        if DEBUG: 
-                            print "            SE Smart Energy Data (RAW LAYER PAYLOAD):", enc_data.getlayer(Raw).fields['load'].encode('hex')
-                            #print "            enc_data:",enc_data.summary,"\n"
-                        else:
-                            if SHOW_RAW:
-                                print "SE Smart Energy Data (RAW LAYER PAYLOAD):", enc_data.getlayer(Raw).fields['load'].encode('hex')
-                                print "enc_data:",enc_data.summary,"\n"
-                    if DEBUG: print
+                        if DEBUG: print indent*3 + "Packet has no SEP Application Layer:",e
+                        if DEBUG: print
                 else:
-                    if DEBUG: print "            Packet has no SEP Application Layer:",e
+                    if DEBUG: print indent*2 + "Packet has no Application Layer:",e
                     if DEBUG: print
-            else:
-                if DEBUG: print "        Packet has no Application Layer:",e
+            except:
+                if DEBUG: print indent*2 + "Decryption failed on packet:",e
                 if DEBUG: print
 
 
