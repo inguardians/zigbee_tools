@@ -1,7 +1,8 @@
 zigbee_tools
 ============
 
-A few ZigBee Tools to compliment KillerBee. These tools leverage the KillerBee and Scapy-Com ZigBee Layer tools and functions.
+A few ZigBee Tools to compliment KillerBee and learn the use of zbscapy. These tools leverage the KillerBee and Scapy-Com ZigBee Layer tools and functions. These tools are mainly examples of how to interact with different packet layers and fields while also, hopefully, providing some useful new functionality.<br><br>
+Check out the [zigbee_tools Wiki Pages](https://github.com/inguardians/zigbee_tools/wiki) for tutorials on installing, setting up, and using zbscapy.
 
 ## LAYER_identifier.py 
 The Layer Identifier tool is designed to determine the different layers in a ZigBee packet. It will print a summary of each ZigBee packet and then print the different layers found in that packet. If the packet has encrypted layers and a key is provided the encrypted layers will be decrypted and the internal layers parsed.
