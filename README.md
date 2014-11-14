@@ -31,8 +31,8 @@ APP_identifier.py Usage
 ```
 
 ## MOD_zb_pcap.py
-The Modify ZigBee Pcap tool takes in a single ZigBee pcap file, identifies all extended and short addresses, and updates these with random values. This tool is used to obfuscate ZigBee capture files for sharing and analysis. Note: the addresses are NOT compliant with any manufacturer codes. 
-
+The Modify ZigBee Pcap tool takes in a single ZigBee pcap file, identifies all extended and short addresses, and updates these with random values. This tool is used to obfuscate ZigBee capture files for sharing and analysis. Note: the addresses are NOT compliant with any manufacturer codes. <br>
+<br>
 FIXME: Some Security Headers do have addresses in them. Updating these values, however, require decrypting the packet and then re-encrypting it with the new values.
 
 ```
@@ -45,8 +45,8 @@ MOD_zb_pcap.py Usage
 ```
 
 ## ADDRESS_identifier.py
-The Address Identification tool is designed to locate all of the extended and short addresses of ZigBee devices from a Pcap file. Currently this tool just spits out the addresses (which was needed for the MOD_zb_pcap.py tool). 
-
+The Address Identification tool is designed to locate all of the extended and short addresses of ZigBee devices from a Pcap file. Currently this tool just spits out the addresses (which was needed for the MOD_zb_pcap.py tool). <br>
+<br>
 FIXME: Future versions of this tool should identify ZigBee devices with specific roles.
 
 ```
@@ -86,8 +86,8 @@ SEP_confirm.py Usage
 ```
 
 ## zbdump_display2
-The zbdump_display2 tool is an updated KillerBee zbdump. This tool provides all the same functionity as zbdump but also allows the user to display incoming packets as they are being written to the dump file. Packets are parsed using KillerBee functions to display the packet fields. If scapy-com is install then the packet is quickly parsed and output in scapy packet display format.
-
+The zbdump_display2 tool is an updated KillerBee zbdump. This tool provides all the same functionity as zbdump but also allows the user to display incoming packets as they are being written to the dump file. Packets are parsed using KillerBee functions to display the packet fields. If scapy-com is install then the packet is quickly parsed and output in scapy packet display format.<br>
+<br>
 NOTE: The packet capture performance with parsing and writing to the screen has not been tested. Therefore, if you are experiencing dropped packets then disable packet display.
 
 ```
