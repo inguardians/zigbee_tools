@@ -59,7 +59,9 @@ ADDRESS_identifier.py Usage
 ```
 
 ## KEY_identifier.py
-The Key Identifier tool searches a ZigBee Pcap file for a Network Key and prints it for the user. Future versions should include the identification of other keys and certs and whether or not additional encryption is being used by the devices on the ZigBee network. NOTE: This provides similar functionality as zbdsniff, only implemented by calling the function that does the zbdsniff functionality. Key output is also the same as is used for input by these other tools.
+The Key Identifier tool searches a ZigBee Pcap file for a Network Key and prints it for the user. Future versions should include the identification of other keys and certs and whether or not additional encryption is being used by the devices on the ZigBee network. <br>
+<br>
+NOTE: This provides similar functionality as zbdsniff, only implemented by calling the function that does the zbdsniff functionality. Key output is also the same as is used for input by these other tools.
 
 ```
 user> python KEY_identifier.py -h
