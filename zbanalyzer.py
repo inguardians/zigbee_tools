@@ -129,6 +129,7 @@ class Controller():
         info += "    Keys: \n"
         for e in self.keys.keys():
             if e: info += "        Pan ID " + hex(e) + ": " + self.keys[e].encode('hex') + '\n'
+            if e: info += "        Prepped: -p " + hex(e)[2:] + " -k " + self.keys[e].encode('hex') + '\n'
 
         info += "###############################\n"
         return info
